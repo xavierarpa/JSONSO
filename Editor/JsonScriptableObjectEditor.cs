@@ -231,6 +231,18 @@ namespace JSONSO.Editor
                 GUIUtility.ExitGUI();
             }
 
+            // Paste button
+            if (GUILayout.Button("P", GUILayout.Width(BUTTON_WIDTH), GUILayout.Height(18)))
+            {
+                var pastedValue = ParseClipboardValue();
+                if (pastedValue != null)
+                {
+                    parent[key] = pastedValue;
+                    EditorUtility.SetDirty(_target);
+                    GUIUtility.ExitGUI();
+                }
+            }
+
             // Delete button
             if (GUILayout.Button("×", GUILayout.Width(BUTTON_WIDTH), GUILayout.Height(18)))
             {
@@ -374,6 +386,18 @@ namespace JSONSO.Editor
                 DuplicateArrayElement(array, index, element);
                 EditorUtility.SetDirty(_target);
                 GUIUtility.ExitGUI();
+            }
+
+            // Paste button
+            if (GUILayout.Button("P", GUILayout.Width(BUTTON_WIDTH), GUILayout.Height(18)))
+            {
+                var pastedValue = ParseClipboardValue();
+                if (pastedValue != null)
+                {
+                    array[index] = pastedValue;
+                    EditorUtility.SetDirty(_target);
+                    GUIUtility.ExitGUI();
+                }
             }
 
             // Delete button
@@ -653,6 +677,77 @@ namespace JSONSO.Editor
                 default:
                     return JsonValue.Null();
             }
+        }
+
+        /// <summary>
+        /// Parses the clipboard content and returns a JsonValue.
+        /// Detects if content is object, array, string, number, boolean, or null.
+        /// </summary>
+        private JsonValue ParseClipboardValue()
+        {
+            string clipboard = GUIUtility.systemCopyBuffer;
+            if (string.IsNullOrEmpty(clipboard))
+            {
+                Debug.LogWarning("Clipboard is empty.");
+                return null;
+            }
+
+            clipboard = clipboard.Trim();
+
+            // Try to parse as JSON (object or array)
+            if (clipboard.StartsWith("{") || clipboard.StartsWith("["))
+            {
+                try
+                {
+                    var parsed = JsonValue.Parse(clipboard);
+                    return parsed;
+                }
+                catch (System.Exception e)
+                {
+                    Debug.LogWarning($"Failed to parse clipboard as JSON: {e.Message}");
+                    return null;
+                }
+            }
+
+            // Check for null
+            if (clipboard == "null")
+            {
+                return JsonValue.Null();
+            }
+
+            // Check for boolean
+            if (clipboard == "true")
+            {
+                return JsonValue.Bool(true);
+            }
+            if (clipboard == "false")
+            {
+                return JsonValue.Bool(false);
+            }
+
+            // Check for number
+            if (float.TryParse(clipboard, System.Globalization.NumberStyles.Float, 
+                System.Globalization.CultureInfo.InvariantCulture, out float numValue))
+            {
+                return JsonValue.Number(numValue);
+            }
+
+            // Check if it's a quoted string (JSON string format)
+            if (clipboard.StartsWith("\"") && clipboard.EndsWith("\"") && clipboard.Length >= 2)
+            {
+                try
+                {
+                    var parsed = JsonValue.Parse(clipboard);
+                    return parsed;
+                }
+                catch (System.Exception)
+                {
+                    // Parsing failed, fall through to treat as plain string
+                }
+            }
+
+            // Treat as plain string
+            return JsonValue.String(clipboard);
         }
 
         /// <summary>
