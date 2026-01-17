@@ -674,6 +674,10 @@ namespace JSONSO.Editor
                 GUIUtility.systemCopyBuffer = _target.ToJson(true);
                 Debug.Log("JSON copied to clipboard!");
             }
+            if (GUILayout.Button("Paste", GUILayout.Width(60)))
+            {
+                PasteFromClipboard();
+            }
             if (GUILayout.Button("Export", GUILayout.Width(60)))
             {
                 ExportJson();
@@ -721,6 +725,39 @@ namespace JSONSO.Editor
             {
                 _target.LoadFromFile(path);
                 EditorUtility.SetDirty(_target);
+            }
+        }
+
+        /// <summary>
+        /// Pastes JSON from the clipboard after validating it.
+        /// </summary>
+        private void PasteFromClipboard()
+        {
+            string clipboardContent = GUIUtility.systemCopyBuffer;
+            
+            if (string.IsNullOrEmpty(clipboardContent))
+            {
+                EditorUtility.DisplayDialog("Paste Error", "Clipboard is empty.", "OK");
+                return;
+            }
+
+            // Validate JSON by attempting to parse it
+            try
+            {
+                var parsed = JsonValue.Parse(clipboardContent);
+                if (parsed == null || !parsed.IsObject)
+                {
+                    EditorUtility.DisplayDialog("Paste Error", "Clipboard content is not a valid JSON object.", "OK");
+                    return;
+                }
+                
+                _target.FromJson(clipboardContent);
+                EditorUtility.SetDirty(_target);
+                Debug.Log("JSON pasted from clipboard!");
+            }
+            catch (System.Exception ex)
+            {
+                EditorUtility.DisplayDialog("Paste Error", $"Invalid JSON format: {ex.Message}", "OK");
             }
         }
     }
