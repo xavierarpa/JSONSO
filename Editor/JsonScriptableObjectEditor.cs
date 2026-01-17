@@ -231,6 +231,12 @@ namespace JSONSO.Editor
                 GUIUtility.ExitGUI();
             }
 
+            // Copy button
+            if (GUILayout.Button("C", GUILayout.Width(BUTTON_WIDTH), GUILayout.Height(18)))
+            {
+                CopyToClipboard(value);
+            }
+
             // Paste button
             if (GUILayout.Button("P", GUILayout.Width(BUTTON_WIDTH), GUILayout.Height(18)))
             {
@@ -386,6 +392,12 @@ namespace JSONSO.Editor
                 DuplicateArrayElement(array, index, element);
                 EditorUtility.SetDirty(_target);
                 GUIUtility.ExitGUI();
+            }
+
+            // Copy button
+            if (GUILayout.Button("C", GUILayout.Width(BUTTON_WIDTH), GUILayout.Height(18)))
+            {
+                CopyToClipboard(element);
             }
 
             // Paste button
@@ -677,6 +689,23 @@ namespace JSONSO.Editor
                 default:
                     return JsonValue.Null();
             }
+        }
+
+        /// <summary>
+        /// Copies a JsonValue to the system clipboard as JSON string.
+        /// </summary>
+        private void CopyToClipboard(JsonValue value)
+        {
+            if (value == null)
+            {
+                GUIUtility.systemCopyBuffer = "null";
+            }
+            else
+            {
+                // ToJson(true) uses pretty print format for better readability
+                GUIUtility.systemCopyBuffer = value.ToJson(true);
+            }
+            Debug.Log("JSON block copied to clipboard!");
         }
 
         /// <summary>
