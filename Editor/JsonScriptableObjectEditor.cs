@@ -745,9 +745,9 @@ namespace JSONSO.Editor
             try
             {
                 var parsed = JsonValue.Parse(clipboardContent);
-                if (parsed == null)
+                if (parsed == null || !parsed.IsObject)
                 {
-                    EditorUtility.DisplayDialog("Paste Error", "Clipboard content is not valid JSON.", "OK");
+                    EditorUtility.DisplayDialog("Paste Error", "Clipboard content is not a valid JSON object.", "OK");
                     return;
                 }
                 
