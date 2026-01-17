@@ -740,9 +740,9 @@ namespace JSONSO.Editor
                     var parsed = JsonValue.Parse(clipboard);
                     return parsed;
                 }
-                catch
+                catch (System.Exception)
                 {
-                    // Fall through to treat as plain string
+                    // Parsing failed, fall through to treat as plain string
                 }
             }
 
