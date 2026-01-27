@@ -19,15 +19,12 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
-using System;
-
 namespace JSONSO
 {
     /// <summary>
-    /// Key-value pair for JSON object serialization.
-    /// Unity doesn't serialize Dictionary, so we use a list of these.
+    /// Key-value pair for JSON objects.
+    /// Used internally by JsonValue for object (dictionary) representation.
     /// </summary>
-    [Serializable]
     public class JsonKeyValue
     {
         public string key;

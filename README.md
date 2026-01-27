@@ -9,6 +9,17 @@ JSONSO - JSON ScriptableObject for Unity
 
 A powerful Unity tool for seamless bidirectional conversion between JSON and ScriptableObjects. Create, edit, save, and load JSON data directly in the Unity Editor with full serialization support.
 
+## ⚡ String-Backed Storage (v2.0+)
+
+JSONSO now uses **string-backed JSON storage** to avoid Unity's serialization depth limit of 10 levels. This means:
+
+- ✅ **No depth limit** - Store deeply nested JSON structures without warnings
+- ✅ **Compact .asset files** - JSON stored as readable string instead of verbose Unity serialization
+- ✅ **Better git diffs** - Changes are human-readable JSON text
+- ✅ **Lazy loading** - JsonValue tree is built on-demand for better performance
+
+> **Note**: `JsonValue` is no longer Unity-serializable. Use `JsonScriptableObjectData` to store JSON data, which handles serialization automatically via string storage.
+
 ## ✨ Features
 
 - 🔄 **Bidirectional Conversion** - Convert ScriptableObjects to JSON and vice versa
@@ -182,12 +193,15 @@ GameSave loadedSave = playerData.ToObject<GameSave>();
 
 | Property/Method | Description |
 |-----------------|-------------|
-| `Root` | The root JsonValue object |
+| `Root` | The root JsonValue object (lazy-loaded from string) |
 | `this[string key]` | Direct access to root properties |
 | `HasKey(string key)` | Checks if a key exists |
 | `Remove(string key)` | Removes a key |
 | `Count` | Number of root properties |
 | `Clear()` | Clears all data |
+| `MarkDirty()` | Marks cache as modified (call after direct Root changes) |
+| `FlushToString()` | Forces immediate serialization to string |
+| `RawJson` | Gets the raw JSON string for debugging |
 
 ### JsonValue
 

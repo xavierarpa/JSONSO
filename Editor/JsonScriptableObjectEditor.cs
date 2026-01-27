@@ -72,6 +72,16 @@ namespace JSONSO.Editor
             SessionState.SetBool(_sessionStatePrefix + key, value);
         }
 
+        /// <summary>
+        /// Marks the target as dirty for both the cache and Unity's asset database.
+        /// This ensures changes are properly saved when using string-backed JSON storage.
+        /// </summary>
+        private void SetTargetDirty()
+        {
+            _target.MarkDirty();
+            EditorUtility.SetDirty(_target);
+        }
+
         public override void OnInspectorGUI()
         {
             serializedObject.Update();
@@ -91,7 +101,7 @@ namespace JSONSO.Editor
                 if (EditorUtility.DisplayDialog("Clear All", "Are you sure you want to delete all data?", "Yes", "No"))
                 {
                     _target.Clear();
-                    EditorUtility.SetDirty(_target);
+                    SetTargetDirty();
                 }
             }
             EditorGUILayout.EndHorizontal();
@@ -156,7 +166,7 @@ namespace JSONSO.Editor
             if (GUILayout.Button("▲", GUILayout.Width(BUTTON_WIDTH), GUILayout.Height(18)))
             {
                 MoveObjectProperty(parent, key, -1);
-                EditorUtility.SetDirty(_target);
+                SetTargetDirty();
                 GUIUtility.ExitGUI();
             }
             EditorGUI.EndDisabledGroup();
@@ -165,7 +175,7 @@ namespace JSONSO.Editor
             if (GUILayout.Button("▼", GUILayout.Width(BUTTON_WIDTH), GUILayout.Height(18)))
             {
                 MoveObjectProperty(parent, key, 1);
-                EditorUtility.SetDirty(_target);
+                SetTargetDirty();
                 GUIUtility.ExitGUI();
             }
             EditorGUI.EndDisabledGroup();
@@ -187,7 +197,7 @@ namespace JSONSO.Editor
             if (newKey != key && !string.IsNullOrEmpty(newKey))
             {
                 RenameKey(parent, key, newKey);
-                EditorUtility.SetDirty(_target);
+                SetTargetDirty();
                 GUIUtility.ExitGUI();
             }
 
@@ -196,7 +206,7 @@ namespace JSONSO.Editor
             if (newType != value.Type)
             {
                 parent[key] = CreateDefaultValue(newType);
-                EditorUtility.SetDirty(_target);
+                SetTargetDirty();
             }
             else
             {
@@ -219,7 +229,7 @@ namespace JSONSO.Editor
                     {
                         value.Add(JsonValue.String(""));
                     }
-                    EditorUtility.SetDirty(_target);
+                    SetTargetDirty();
                 }
             }
 
@@ -227,7 +237,7 @@ namespace JSONSO.Editor
             if (GUILayout.Button("D", GUILayout.Width(BUTTON_WIDTH), GUILayout.Height(18)))
             {
                 DuplicateProperty(parent, key, value);
-                EditorUtility.SetDirty(_target);
+                SetTargetDirty();
                 GUIUtility.ExitGUI();
             }
 
@@ -244,7 +254,7 @@ namespace JSONSO.Editor
                 if (pastedValue != null)
                 {
                     parent[key] = pastedValue;
-                    EditorUtility.SetDirty(_target);
+                    SetTargetDirty();
                     GUIUtility.ExitGUI();
                 }
             }
@@ -253,7 +263,7 @@ namespace JSONSO.Editor
             if (GUILayout.Button("×", GUILayout.Width(BUTTON_WIDTH), GUILayout.Height(18)))
             {
                 parent.Remove(key);
-                EditorUtility.SetDirty(_target);
+                SetTargetDirty();
                 GUIUtility.ExitGUI();
             }
 
@@ -325,7 +335,7 @@ namespace JSONSO.Editor
             if (GUILayout.Button("▲", GUILayout.Width(BUTTON_WIDTH), GUILayout.Height(18)))
             {
                 MoveArrayElement(array, index, -1);
-                EditorUtility.SetDirty(_target);
+                SetTargetDirty();
                 GUIUtility.ExitGUI();
             }
             EditorGUI.EndDisabledGroup();
@@ -334,7 +344,7 @@ namespace JSONSO.Editor
             if (GUILayout.Button("▼", GUILayout.Width(BUTTON_WIDTH), GUILayout.Height(18)))
             {
                 MoveArrayElement(array, index, 1);
-                EditorUtility.SetDirty(_target);
+                SetTargetDirty();
                 GUIUtility.ExitGUI();
             }
             EditorGUI.EndDisabledGroup();
@@ -359,7 +369,7 @@ namespace JSONSO.Editor
             if (newType != element.Type)
             {
                 array[index] = CreateDefaultValue(newType);
-                EditorUtility.SetDirty(_target);
+                SetTargetDirty();
             }
             else
             {
@@ -382,7 +392,7 @@ namespace JSONSO.Editor
                     {
                         element.Add(JsonValue.String(""));
                     }
-                    EditorUtility.SetDirty(_target);
+                    SetTargetDirty();
                 }
             }
 
@@ -390,7 +400,7 @@ namespace JSONSO.Editor
             if (GUILayout.Button("D", GUILayout.Width(BUTTON_WIDTH), GUILayout.Height(18)))
             {
                 DuplicateArrayElement(array, index, element);
-                EditorUtility.SetDirty(_target);
+                SetTargetDirty();
                 GUIUtility.ExitGUI();
             }
 
@@ -407,7 +417,7 @@ namespace JSONSO.Editor
                 if (pastedValue != null)
                 {
                     array[index] = pastedValue;
-                    EditorUtility.SetDirty(_target);
+                    SetTargetDirty();
                     GUIUtility.ExitGUI();
                 }
             }
@@ -416,7 +426,7 @@ namespace JSONSO.Editor
             if (GUILayout.Button("×", GUILayout.Width(BUTTON_WIDTH), GUILayout.Height(18)))
             {
                 array.RemoveAt(index);
-                EditorUtility.SetDirty(_target);
+                SetTargetDirty();
                 GUIUtility.ExitGUI();
             }
 
@@ -459,7 +469,7 @@ namespace JSONSO.Editor
                     if (strVal != value.AsString)
                     {
                         parent[key] = JsonValue.String(strVal);
-                        EditorUtility.SetDirty(_target);
+                        SetTargetDirty();
                     }
                     break;
 
@@ -468,7 +478,7 @@ namespace JSONSO.Editor
                     if (!Mathf.Approximately(numVal, value.AsFloat))
                     {
                         parent[key] = JsonValue.Number(numVal);
-                        EditorUtility.SetDirty(_target);
+                        SetTargetDirty();
                     }
                     break;
 
@@ -477,7 +487,7 @@ namespace JSONSO.Editor
                     if (boolVal != value.AsBool)
                     {
                         parent[key] = JsonValue.Bool(boolVal);
-                        EditorUtility.SetDirty(_target);
+                        SetTargetDirty();
                     }
                     break;
 
@@ -507,7 +517,7 @@ namespace JSONSO.Editor
                     if (strVal != element.AsString)
                     {
                         array[index] = JsonValue.String(strVal);
-                        EditorUtility.SetDirty(_target);
+                        SetTargetDirty();
                     }
                     break;
 
@@ -516,7 +526,7 @@ namespace JSONSO.Editor
                     if (!Mathf.Approximately(numVal, element.AsFloat))
                     {
                         array[index] = JsonValue.Number(numVal);
-                        EditorUtility.SetDirty(_target);
+                        SetTargetDirty();
                     }
                     break;
 
@@ -525,7 +535,7 @@ namespace JSONSO.Editor
                     if (boolVal != element.AsBool)
                     {
                         array[index] = JsonValue.Bool(boolVal);
-                        EditorUtility.SetDirty(_target);
+                        SetTargetDirty();
                     }
                     break;
 
@@ -619,7 +629,7 @@ namespace JSONSO.Editor
                 counter++;
             }
             obj[key] = JsonValue.String("");
-            EditorUtility.SetDirty(_target);
+            SetTargetDirty();
         }
 
         /// <summary>
@@ -848,7 +858,7 @@ namespace JSONSO.Editor
             if (!string.IsNullOrEmpty(path))
             {
                 _target.LoadFromFile(path);
-                EditorUtility.SetDirty(_target);
+                SetTargetDirty();
             }
         }
 
@@ -876,7 +886,7 @@ namespace JSONSO.Editor
                 }
                 
                 _target.FromJson(clipboardContent);
-                EditorUtility.SetDirty(_target);
+                SetTargetDirty();
                 Debug.Log("JSON pasted from clipboard!");
             }
             catch (System.Exception ex)

@@ -23,7 +23,6 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Text;
-using UnityEngine;
 
 namespace JSONSO
 {
@@ -35,16 +34,19 @@ namespace JSONSO
     /// - boolean
     /// - object (nested dictionary)
     /// - array (list of values)
+    /// 
+    /// Note: This class is NOT Unity-serializable by design.
+    /// Use JsonScriptableObjectData which stores JSON as string and builds JsonValue on demand.
+    /// This avoids Unity's serialization depth limit of 10.
     /// </summary>
-    [Serializable]
     public class JsonValue
     {
-        [SerializeField] private JsonValueType _type = JsonValueType.Null;
-        [SerializeField] private string _stringValue;
-        [SerializeField] private float _numberValue;
-        [SerializeField] private bool _boolValue;
-        [SerializeField] private List<JsonKeyValue> _objectValue = new List<JsonKeyValue>();
-        [SerializeField] private List<JsonValue> _arrayValue = new List<JsonValue>();
+        private JsonValueType _type = JsonValueType.Null;
+        private string _stringValue;
+        private float _numberValue;
+        private bool _boolValue;
+        private List<JsonKeyValue> _objectValue = new List<JsonKeyValue>();
+        private List<JsonValue> _arrayValue = new List<JsonValue>();
 
         public JsonValueType Type => _type;
 

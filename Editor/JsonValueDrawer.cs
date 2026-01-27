@@ -26,68 +26,38 @@ namespace JSONSO.Editor
 {
     /// <summary>
     /// PropertyDrawer for JsonValue.
-    /// Allows editing individual JsonValue fields in the inspector.
+    /// Note: JsonValue is NOT Unity-serializable by design to avoid depth limit issues.
+    /// This drawer shows a warning message if someone attempts to use JsonValue as a serialized field.
+    /// Use JsonScriptableObjectData instead, which stores JSON as string and provides lazy-loaded access.
     /// </summary>
     [CustomPropertyDrawer(typeof(JsonValue))]
     public class JsonValueDrawer : PropertyDrawer
     {
+        private static readonly Color WarningColor = new Color(1f, 0.8f, 0.2f, 0.3f);
+        
         public override void OnGUI(Rect position, SerializedProperty property, GUIContent label)
         {
             EditorGUI.BeginProperty(position, label, property);
             
-            // Draw the label
-            position = EditorGUI.PrefixLabel(position, GUIUtility.GetControlID(FocusType.Passive), label);
+            // Draw warning background
+            EditorGUI.DrawRect(position, WarningColor);
             
-            // Get the type field
-            var typeProp = property.FindPropertyRelative("_type");
-            var type = (JsonValueType)typeProp.enumValueIndex;
-
-            // Draw the type dropdown
-            float typeWidth = 80f;
-            Rect typeRect = new Rect(position.x, position.y, typeWidth, position.height);
-            EditorGUI.PropertyField(typeRect, typeProp, GUIContent.none);
-
-            // Draw the value based on type
-            float valueX = position.x + typeWidth + 5;
-            float valueWidth = position.width - typeWidth - 5;
-            Rect valueRect = new Rect(valueX, position.y, valueWidth, position.height);
-
-            switch (type)
-            {
-                case JsonValueType.String:
-                    var stringProp = property.FindPropertyRelative("_stringValue");
-                    EditorGUI.PropertyField(valueRect, stringProp, GUIContent.none);
-                    break;
-
-                case JsonValueType.Number:
-                    var numberProp = property.FindPropertyRelative("_numberValue");
-                    EditorGUI.PropertyField(valueRect, numberProp, GUIContent.none);
-                    break;
-
-                case JsonValueType.Boolean:
-                    var boolProp = property.FindPropertyRelative("_boolValue");
-                    EditorGUI.PropertyField(valueRect, boolProp, GUIContent.none);
-                    break;
-
-                case JsonValueType.Object:
-                    EditorGUI.LabelField(valueRect, "(Use the custom editor to edit)");
-                    break;
-
-                case JsonValueType.Array:
-                    EditorGUI.LabelField(valueRect, "(Use the custom editor to edit)");
-                    break;
-
-                case JsonValueType.Null:
-                    EditorGUI.LabelField(valueRect, "null");
-                    break;
-            }
-
+            // Draw the label
+            Rect labelRect = new Rect(position.x, position.y, EditorGUIUtility.labelWidth, position.height);
+            EditorGUI.LabelField(labelRect, label);
+            
+            // Draw warning message
+            Rect messageRect = new Rect(position.x + EditorGUIUtility.labelWidth + 2, position.y, 
+                position.width - EditorGUIUtility.labelWidth - 2, position.height);
+            
+            EditorGUI.HelpBox(messageRect, "JsonValue is not serializable. Use JsonScriptableObjectData instead.", MessageType.Warning);
+            
             EditorGUI.EndProperty();
         }
 
         public override float GetPropertyHeight(SerializedProperty property, GUIContent label)
         {
-            return EditorGUIUtility.singleLineHeight;
+            return EditorGUIUtility.singleLineHeight * 2 + 4;
         }
     }
 }

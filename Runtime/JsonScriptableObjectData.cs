@@ -19,13 +19,15 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
+using System;
 using UnityEngine;
 
 namespace JSONSO
 {
     /// <summary>
     /// Generic ScriptableObject that behaves like a JSON.
-    /// Contains a root JsonValue that can be an object with nested properties.
+    /// Uses string-backed storage to avoid Unity's serialization depth limit.
+    /// The JsonValue tree is built on-demand and cached in memory.
     /// 
     /// Usage example:
     /// <code>
@@ -40,7 +42,7 @@ namespace JSONSO
     /// data.Root["inventory"].Add("shield");
     /// 
     /// string json = data.ToJson(true);
-    /// // Resultado:
+    /// // Result:
     /// // {
     /// //   "name": "Player1",
     /// //   "level": 10,
@@ -53,25 +55,86 @@ namespace JSONSO
     /// </code>
     /// </summary>
     [CreateAssetMenu(fileName = "NewJsonData", menuName = "JSONSO/Json Data", order = 99999999)]
-    public class JsonScriptableObjectData : JsonScriptableObject
+    public class JsonScriptableObjectData : JsonScriptableObject, ISerializationCallbackReceiver
     {
-        [SerializeField] 
-        private JsonValue _root = JsonValue.Object();
+        [SerializeField, TextArea(3, 15)] 
+        private string _jsonString = "{}";
+        
+        [NonSerialized]
+        private JsonValue _cachedRoot;
+        
+        [NonSerialized]
+        private bool _isCacheDirty;
 
         /// <summary>
         /// JSON root. It's an object (dictionary) where you can add properties.
+        /// The JsonValue is built lazily from the stored JSON string.
         /// </summary>
         public JsonValue Root
         {
             get
             {
-                if (_root == null || !_root.IsObject)
+                if (_cachedRoot == null)
                 {
-                    _root = JsonValue.Object();
+                    RebuildCache();
                 }
-                return _root;
+                return _cachedRoot;
             }
-            set => _root = value;
+            set
+            {
+                _cachedRoot = value ?? JsonValue.Object();
+                _isCacheDirty = true;
+            }
+        }
+        
+        /// <summary>
+        /// Rebuilds the cached JsonValue from the stored JSON string.
+        /// </summary>
+        private void RebuildCache()
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(_jsonString) || _jsonString.Trim() == "")
+                {
+                    _cachedRoot = JsonValue.Object();
+                }
+                else
+                {
+                    _cachedRoot = JsonValue.Parse(_jsonString);
+                    if (_cachedRoot == null || !_cachedRoot.IsObject)
+                    {
+                        _cachedRoot = JsonValue.Object();
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                Debug.LogError($"[JsonScriptableObjectData] Failed to parse JSON: {e.Message}");
+                _cachedRoot = JsonValue.Object();
+            }
+            _isCacheDirty = false;
+        }
+        
+        /// <summary>
+        /// Marks the cache as dirty, causing it to be serialized on the next Unity serialization pass.
+        /// Call this after modifying the Root directly.
+        /// </summary>
+        public void MarkDirty()
+        {
+            _isCacheDirty = true;
+        }
+        
+        /// <summary>
+        /// Forces the JSON string to be updated from the current cache.
+        /// Useful before saving or when you need the string immediately.
+        /// </summary>
+        public void FlushToString()
+        {
+            if (_cachedRoot != null)
+            {
+                _jsonString = _cachedRoot.ToJson(true);
+                _isCacheDirty = false;
+            }
         }
 
         /// <summary>
@@ -103,7 +166,9 @@ namespace JSONSO
         /// </summary>
         public void Clear()
         {
-            _root = JsonValue.Object();
+            _jsonString = "{}";
+            _cachedRoot = JsonValue.Object();
+            _isCacheDirty = false;
         }
 
         /// <summary>
@@ -112,7 +177,21 @@ namespace JSONSO
         public override string ToJson(bool prettyPrint = false)
         {
             OnBeforeSerialize();
-            return Root.ToJson(prettyPrint);
+            if (_cachedRoot != null)
+            {
+                return _cachedRoot.ToJson(prettyPrint);
+            }
+            return prettyPrint ? FormatJson(_jsonString) : _jsonString;
+        }
+        
+        /// <summary>
+        /// Simple JSON formatter for pretty print when cache is not available.
+        /// </summary>
+        private static string FormatJson(string json)
+        {
+            // If we have no cache, just parse and format
+            var parsed = JsonValue.Parse(json);
+            return parsed?.ToJson(true) ?? json;
         }
 
         /// <summary>
@@ -126,8 +205,45 @@ namespace JSONSO
                 return;
             }
 
-            _root = JsonValue.Parse(json);
+            _jsonString = json;
+            _cachedRoot = null; // Invalidate cache, will rebuild on next access
+            _isCacheDirty = false;
             OnAfterDeserialize();
         }
+        
+        #region ISerializationCallbackReceiver
+        
+        /// <summary>
+        /// Called by Unity before serializing to disk.
+        /// Flushes the cached JsonValue back to the JSON string.
+        /// </summary>
+        void ISerializationCallbackReceiver.OnBeforeSerialize()
+        {
+            // Only update the string if we have a cache and it was modified
+            if (_cachedRoot != null && _isCacheDirty)
+            {
+                _jsonString = _cachedRoot.ToJson(true);
+                _isCacheDirty = false;
+            }
+        }
+        
+        /// <summary>
+        /// Called by Unity after deserializing from disk.
+        /// Invalidates the cache so it rebuilds on next access.
+        /// </summary>
+        void ISerializationCallbackReceiver.OnAfterDeserialize()
+        {
+            // Don't rebuild here - lazy load on first access
+            // Just invalidate the cache
+            _cachedRoot = null;
+            _isCacheDirty = false;
+        }
+        
+        #endregion
+        
+        /// <summary>
+        /// Gets the raw JSON string (for debugging/inspection).
+        /// </summary>
+        public string RawJson => _jsonString;
     }
 }
