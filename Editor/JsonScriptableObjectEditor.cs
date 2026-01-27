@@ -34,17 +34,20 @@ namespace JSONSO.Editor
         private JsonScriptableObjectData _target;
         private bool _showJsonPreview = false;
         private Vector2 _jsonPreviewScroll;
+        private Vector2 _contentScroll;
         private string _jsonPreview = "";
         
         // Unique prefix for SessionState based on the asset
         private string _sessionStatePrefix;
 
         // Layout constants
-        private const float KEY_WIDTH = 120f;
-        private const float TYPE_WIDTH = 75f;
-        private const float COUNT_WIDTH = 35f;
+        private const float KEY_WIDTH = 100f;
+        private const float TYPE_WIDTH = 70f;
         private const float BUTTON_WIDTH = 20f;
-        private const float INDEX_WIDTH = 35f;
+        private const float INDEX_WIDTH = 30f;
+        private const float INDENT_SIZE = 15f;
+        private const int MAX_INDENT_LEVELS = 20;
+        private const float MIN_ROW_WIDTH = 500f; // Minimum width before horizontal scroll appears
 
         private void OnEnable()
         {
@@ -146,8 +149,9 @@ namespace JSONSO.Editor
         /// </summary>
         private void DrawProperty(JsonValue parent, string key, JsonValue value, int depth, int index, int totalCount)
         {
-            EditorGUI.indentLevel = depth;
-
+            // Indentation
+            float indent = Mathf.Min(depth, MAX_INDENT_LEVELS) * INDENT_SIZE;
+            
             // Background color based on depth
             Color bgColor = depth % 2 == 0 
                 ? new Color(0.8f, 0.8f, 0.8f, 0.1f) 
@@ -156,10 +160,39 @@ namespace JSONSO.Editor
             Rect boxRect = EditorGUILayout.BeginVertical();
             EditorGUI.DrawRect(boxRect, bgColor);
 
+            // Detect click on row background to toggle foldout (only for Object/Array)
+            if ((value.IsObject || value.IsArray) && boxRect.width > 0)
+            {
+                string clickFoldoutKey = $"{depth}_{key}";
+                Rect headerRect = new Rect(boxRect.x, boxRect.y, boxRect.width, EditorGUIUtility.singleLineHeight + 4);
+                
+                if (Event.current.type == EventType.MouseDown && headerRect.Contains(Event.current.mousePosition))
+                {
+                    float mouseX = Event.current.mousePosition.x;
+                    float controlsEndX = boxRect.x + indent + (BUTTON_WIDTH * 2) + 10;
+                    float foldoutWidth = 15f;
+                    float keyFieldStart = controlsEndX + foldoutWidth;
+                    float keyTypeEnd = keyFieldStart + KEY_WIDTH + TYPE_WIDTH + 20; // +20 for full dropdown coverage
+                    float rightButtonsX = boxRect.xMax - (BUTTON_WIDTH * 6) - 20;
+                    
+                    // Clickeable areas: foldout arrow OR info label area (after type dropdown)
+                    bool inFoldoutArea = mouseX >= controlsEndX && mouseX < keyFieldStart;
+                    bool inInfoArea = mouseX >= keyTypeEnd && mouseX < rightButtonsX;
+                    
+                    if (inFoldoutArea || inInfoArea)
+                    {
+                        bool currentState = GetFoldoutState(clickFoldoutKey, false);
+                        SetFoldoutState(clickFoldoutKey, !currentState);
+                        Event.current.Use();
+                        Repaint();
+                    }
+                }
+            }
+
             EditorGUILayout.BeginHorizontal();
 
-            // Spacing for hierarchy
-            GUILayout.Space(depth * 15);
+            // Indentation space
+            GUILayout.Space(indent);
 
             // Reorder buttons (▲ ▼)
             EditorGUI.BeginDisabledGroup(index == 0);
@@ -180,7 +213,7 @@ namespace JSONSO.Editor
             }
             EditorGUI.EndDisabledGroup();
 
-            GUILayout.Space(8);
+            GUILayout.Space(10);
 
             // Foldout for Object/Array
             if (value.IsObject || value.IsArray)
@@ -192,7 +225,7 @@ namespace JSONSO.Editor
                     SetFoldoutState(foldoutKey, newState);
             }
 
-            // Key field
+            // Key field - fixed width
             string newKey = EditorGUILayout.TextField(key, GUILayout.Width(KEY_WIDTH));
             if (newKey != key && !string.IsNullOrEmpty(newKey))
             {
@@ -316,8 +349,9 @@ namespace JSONSO.Editor
         /// </summary>
         private void DrawArrayElement(JsonValue array, int index, JsonValue element, int depth, int totalCount)
         {
-            EditorGUI.indentLevel = depth;
-
+            // Indentation
+            float indent = Mathf.Min(depth, MAX_INDENT_LEVELS) * INDENT_SIZE;
+            
             Color bgColor = depth % 2 == 0 
                 ? new Color(0.7f, 0.85f, 0.7f, 0.1f) 
                 : new Color(0.6f, 0.75f, 0.6f, 0.1f);
@@ -325,10 +359,39 @@ namespace JSONSO.Editor
             Rect boxRect = EditorGUILayout.BeginVertical();
             EditorGUI.DrawRect(boxRect, bgColor);
 
+            // Detect click on row background to toggle foldout (only for Object/Array)
+            if ((element.IsObject || element.IsArray) && boxRect.width > 0)
+            {
+                string clickFoldoutKey = $"arr_{depth}_{index}";
+                Rect headerRect = new Rect(boxRect.x, boxRect.y, boxRect.width, EditorGUIUtility.singleLineHeight + 4);
+                
+                if (Event.current.type == EventType.MouseDown && headerRect.Contains(Event.current.mousePosition))
+                {
+                    float mouseX = Event.current.mousePosition.x;
+                    float controlsEndX = boxRect.x + indent + (BUTTON_WIDTH * 2) + 10;
+                    float foldoutWidth = 15f;
+                    float indexLabelStart = controlsEndX + foldoutWidth;
+                    float indexTypeEnd = indexLabelStart + INDEX_WIDTH + TYPE_WIDTH;
+                    float rightButtonsX = boxRect.xMax - (BUTTON_WIDTH * 6) - 20;
+                    
+                    // Clickeable areas: foldout arrow OR info label area (after type dropdown)
+                    bool inFoldoutArea = mouseX >= controlsEndX && mouseX < indexLabelStart;
+                    bool inInfoArea = mouseX >= indexTypeEnd && mouseX < rightButtonsX;
+                    
+                    if (inFoldoutArea || inInfoArea)
+                    {
+                        bool currentState = GetFoldoutState(clickFoldoutKey, false);
+                        SetFoldoutState(clickFoldoutKey, !currentState);
+                        Event.current.Use();
+                        Repaint();
+                    }
+                }
+            }
+
             EditorGUILayout.BeginHorizontal();
 
-            // Spacing for hierarchy
-            GUILayout.Space(depth * 15);
+            // Indentation space
+            GUILayout.Space(indent);
 
             // Reorder buttons (▲ ▼)
             EditorGUI.BeginDisabledGroup(index == 0);
@@ -349,7 +412,7 @@ namespace JSONSO.Editor
             }
             EditorGUI.EndDisabledGroup();
 
-            GUILayout.Space(8);
+            GUILayout.Space(10);
 
             // Foldout for Object/Array
             if (element.IsObject || element.IsArray)
@@ -483,7 +546,7 @@ namespace JSONSO.Editor
                     break;
 
                 case JsonValueType.Boolean:
-                    bool boolVal = EditorGUILayout.Toggle(value.AsBool);
+                    bool boolVal = EditorGUILayout.Toggle(value.AsBool, GUILayout.Width(18));
                     if (boolVal != value.AsBool)
                     {
                         parent[key] = JsonValue.Bool(boolVal);
@@ -492,15 +555,15 @@ namespace JSONSO.Editor
                     break;
 
                 case JsonValueType.Object:
-                    EditorGUILayout.LabelField($"{{ {value.Count} props }}", GUILayout.Width(COUNT_WIDTH + 50));
+                    EditorGUILayout.LabelField($"{{ {value.Count} props }}", GUILayout.Width(75));
                     break;
 
                 case JsonValueType.Array:
-                    EditorGUILayout.LabelField($"[ {value.Count} items ]", GUILayout.Width(COUNT_WIDTH + 50));
+                    EditorGUILayout.LabelField($"[ {value.Count} items ]", GUILayout.Width(75));
                     break;
 
                 case JsonValueType.Null:
-                    EditorGUILayout.LabelField("null");
+                    EditorGUILayout.LabelField("null", GUILayout.Width(40));
                     break;
             }
         }
@@ -531,7 +594,7 @@ namespace JSONSO.Editor
                     break;
 
                 case JsonValueType.Boolean:
-                    bool boolVal = EditorGUILayout.Toggle(element.AsBool);
+                    bool boolVal = EditorGUILayout.Toggle(element.AsBool, GUILayout.Width(18));
                     if (boolVal != element.AsBool)
                     {
                         array[index] = JsonValue.Bool(boolVal);
@@ -540,15 +603,15 @@ namespace JSONSO.Editor
                     break;
 
                 case JsonValueType.Object:
-                    EditorGUILayout.LabelField($"{{ {element.Count} props }}", GUILayout.Width(COUNT_WIDTH + 50));
+                    EditorGUILayout.LabelField($"{{ {element.Count} props }}", GUILayout.Width(75));
                     break;
 
                 case JsonValueType.Array:
-                    EditorGUILayout.LabelField($"[ {element.Count} items ]", GUILayout.Width(COUNT_WIDTH + 50));
+                    EditorGUILayout.LabelField($"[ {element.Count} items ]", GUILayout.Width(75));
                     break;
 
                 case JsonValueType.Null:
-                    EditorGUILayout.LabelField("null");
+                    EditorGUILayout.LabelField("null", GUILayout.Width(40));
                     break;
             }
         }
